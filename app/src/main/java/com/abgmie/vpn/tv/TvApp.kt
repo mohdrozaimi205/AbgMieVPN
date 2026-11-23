@@ -172,11 +172,14 @@ fun TvHome(vm: MainViewModel, onLocations: () -> Unit, onAdd: () -> Unit) {
                 color = Abg.colors.textDim, fontSize = 16.sp,
             )
             v.error?.let { Spacer(Modifier.height(10.dp)); Text(it, color = Brand.Danger, fontSize = 15.sp) }
-            if (servers.isEmpty()) {
+            if (selected == null) {
                 Spacer(Modifier.height(14.dp))
-                Text("VPN connection not yet available – no server configured.", color = Brand.Warning, fontSize = 16.sp)
+                Text("No server selected – pick a VPN Gate relay or add your own server.", color = Brand.Warning, fontSize = 16.sp)
                 Spacer(Modifier.height(8.dp))
-                PrimaryButton("Add server", onAdd, icon = Icons.Rounded.Add)
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    PrimaryButton("Locations", onLocations, icon = Icons.Rounded.Public)
+                    SecondaryButton("Add server", onAdd, icon = Icons.Rounded.Add)
+                }
             }
         }
         Spacer(Modifier.width(24.dp))
@@ -191,16 +194,17 @@ fun TvHome(vm: MainViewModel, onLocations: () -> Unit, onAdd: () -> Unit) {
                     Spacer(Modifier.width(16.dp))
                     Column {
                         Text(country?.name ?: "Choose a location", color = Abg.colors.text, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
-                        Text(selected?.let { "${it.city} · ${it.endpoint}" } ?: "Open Locations", color = Abg.colors.textDim, fontSize = 15.sp)
+                        Text(selected?.let { "${it.title} · ${it.endpoint}" } ?: "Open Locations", color = Abg.colors.textDim, fontSize = 15.sp, maxLines = 1)
+                        Text(selected?.subtitle ?: "", color = Brand.Cyan, fontSize = 13.sp)
                     }
                 }
             }
             Spacer(Modifier.height(14.dp))
             TvInfo("Duration", v.connectedAt?.takeIf { v.status.isActive }?.let { Fmt.duration(now - it) } ?: "00:00:00", Icons.Rounded.Timer)
             TvInfo("Public IP", v.publicIp ?: "—", Icons.Rounded.Language)
-            TvInfo("Download", Fmt.rate(v.rxRate) + "  ·  " + Fmt.bytes(v.rxBytes), Icons.Rounded.SouthEast)
-            TvInfo("Upload", Fmt.rate(v.txRate) + "  ·  " + Fmt.bytes(v.txBytes), Icons.Rounded.NorthEast)
-            TvInfo("Ping", selected?.lastPingMs?.let { "$it ms" } ?: "—", Icons.Rounded.NetworkPing)
+            TvInfo("Download", if (v.hasCounters) Fmt.rate(v.rxRate) + "  ·  " + Fmt.bytes(v.rxBytes) else "n/a (OpenVPN)", Icons.Rounded.SouthEast)
+            TvInfo("Upload", if (v.hasCounters) Fmt.rate(v.txRate) + "  ·  " + Fmt.bytes(v.txBytes) else "n/a (OpenVPN)", Icons.Rounded.NorthEast)
+            TvInfo("Ping", selected?.pingMs?.let { "$it ms" } ?: "—", Icons.Rounded.NetworkPing)
         }
     }
 }
@@ -233,12 +237,40 @@ fun TvLocations(vm: MainViewModel, onAdd: () -> Unit, onConnected: () -> Unit) {
                 PrimaryButton("Auto Connect", { vm.autoConnect(); onConnected() }, icon = Icons.Rounded.Bolt)
                 SecondaryButton("Measure ping", { vm.measurePings() }, icon = Icons.Rounded.NetworkPing)
                 SecondaryButton("Add server", onAdd, icon = Icons.Rounded.Add)
+                SecondaryButton("Refresh VPN Gate", { vm.refreshGate() }, icon = Icons.Rounded.Refresh)
             }
             OutlinedTextField(
                 value = q, onValueChange = { vm.query.value = it }, singleLine = true,
                 placeholder = { Text("Search country or city") }, leadingIcon = { Icon(Icons.Rounded.Search, null) },
                 shape = CircleShape, modifier = Modifier.fillMaxWidth(0.6f).padding(vertical = 12.dp),
             )
+            val gl by vm.gateList.collectAsStateWithLifecycle()
+            if (!vm.helperInstalled()) {
+                Spacer(Modifier.height(6.dp))
+                Text("VPN Gate needs the free helper app \"OpenVPN for Android\".", color = Brand.Warning, fontSize = 15.sp)
+                PrimaryButton("Install OpenVPN for Android", { vm.installHelper() }, icon = Icons.Rounded.Download)
+            }
+            if (gl.servers.isNotEmpty()) {
+                SectionTitle("VPN Gate – top public relays (volunteer servers, may log)")
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp), contentPadding = PaddingValues(6.dp)) {
+                    items(gl.servers.sortedByDescending { it.score }.take(20), key = { it.id }) { g ->
+                        GlassCard(Modifier.width(280.dp), onClick = { vm.connectGate(g); onConnected() }, radius = 22.dp) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(CountryData.find(g.countryCode)?.flag ?: "🌐", fontSize = 34.sp)
+                                Spacer(Modifier.width(12.dp))
+                                Column {
+                                    Text(g.countryName, color = Abg.colors.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                                    Text(g.hostName, color = Abg.colors.textDim, fontSize = 13.sp, maxLines = 1)
+                                }
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            Text(com.abgmie.vpn.mobile.gateLine(g), color = Brand.Cyan, fontSize = 13.sp, maxLines = 1)
+                        }
+                    }
+                }
+            } else if (gl.error != null) {
+                Text(gl.error ?: "", color = Brand.Danger, fontSize = 14.sp)
+            }
             if (servers.isNotEmpty()) {
                 SectionTitle("My servers")
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp), contentPadding = PaddingValues(6.dp)) {
@@ -256,7 +288,12 @@ fun TvLocations(vm: MainViewModel, onAdd: () -> Unit, onConnected: () -> Unit) {
                             Modifier.width(210.dp).height(140.dp),
                             onClick = {
                                 val best = row.servers.minByOrNull { it.lastPingMs ?: Int.MAX_VALUE }
-                                if (best != null) { vm.connectTo(best); onConnected() } else vm.say("${row.country.name}: Coming Soon")
+                                val gate = row.bestGate
+                                when {
+                                    best != null -> { vm.connectTo(best); onConnected() }
+                                    gate != null -> { vm.connectGate(gate); onConnected() }
+                                    else -> vm.say("${row.country.name}: Coming Soon")
+                                }
                             },
                             highlight = row.connectable, radius = 22.dp,
                         ) {
@@ -264,7 +301,11 @@ fun TvLocations(vm: MainViewModel, onAdd: () -> Unit, onConnected: () -> Unit) {
                             Spacer(Modifier.height(6.dp))
                             Text(row.country.name, color = Abg.colors.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
                             Text(
-                                if (row.connectable) "Connectable · ${row.servers.size}" + (row.bestPing?.let { " · $it ms" } ?: "") else "Coming Soon",
+                                when {
+                                    row.servers.isNotEmpty() -> "Connectable · ${row.servers.size}" + (row.bestPing?.let { " · $it ms" } ?: "")
+                                    row.connectable -> "VPN Gate · ${row.gates.size}"
+                                    else -> "Coming Soon"
+                                },
                                 color = if (row.connectable) Brand.Success else Abg.colors.textDim, fontSize = 13.sp,
                             )
                         }

@@ -25,13 +25,16 @@ Tiada langganan, tiada iklan, tiada kuota, tiada had laju dari app. Kelajuan & d
 | UI TV khas: sidebar kiri, D-pad, Quick Connect, banner Leanback | ✅ |
 | Kemas kini dari GitHub Releases + semakan SHA-256 | ✅ |
 | GitHub Actions bina APK → Releases | ✅ |
+| VPN Gate public relays (OpenVPN) via app pembantu "OpenVPN for Android" | ✅ |
 | Firestore cloud sync | ⏳ belum (pilihan) — tiada data keluar dari peranti |
 | Beban (load %) server | Hanya dipaparkan jika ada sumber sebenar; jika tidak "unknown" |
 
-## PENTING: perlukan server sendiri
+## Dua jenis server
 
-App ini **tidak** datang dengan server. Tiada IP, kunci atau server palsu. Semua negara tunjuk **Coming Soon** sehingga anda tambah server WireGuard anda sendiri.
-➡️ Ikut [docs/SERVER_SETUP.md](docs/SERVER_SETUP.md) (lebih kurang 15 minit).
+1. **VPN Gate (percuma, awam)** – senarai sebenar dari vpngate.net, terus dalam tab Locations. Perlu pasang sekali app percuma **OpenVPN for Android** (Play Store); AbgMieVPN mengawalnya melalui API rasmi. Server sukarelawan – boleh log sambungan anda; jangan guna untuk perbankan.
+2. **Server WireGuard sendiri (paling peribadi & laju)** – ikut [docs/SERVER_SETUP.md](docs/SERVER_SETUP.md).
+
+Tiada IP, kunci atau server palsu. Negara tanpa server tunjuk **Coming Soon**.
 
 ## Bina APK
 

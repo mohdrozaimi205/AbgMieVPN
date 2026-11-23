@@ -34,10 +34,10 @@ fun StatsContent(vpn: VpnState, usage: UsageSummary, sessions: List<SessionEntit
     Column {
         SectionTitle("Live")
         val tiles = listOf(
-            Triple("Download speed", Fmt.rate(vpn.rxRate), Icons.Rounded.SouthEast),
-            Triple("Upload speed", Fmt.rate(vpn.txRate), Icons.Rounded.NorthEast),
-            Triple("Downloaded (session)", Fmt.bytes(vpn.rxBytes), Icons.Rounded.CloudDownload),
-            Triple("Uploaded (session)", Fmt.bytes(vpn.txBytes), Icons.Rounded.CloudUpload),
+            Triple("Download speed", if (vpn.hasCounters) Fmt.rate(vpn.rxRate) else "n/a (OpenVPN)", Icons.Rounded.SouthEast),
+            Triple("Upload speed", if (vpn.hasCounters) Fmt.rate(vpn.txRate) else "n/a (OpenVPN)", Icons.Rounded.NorthEast),
+            Triple("Downloaded (session)", if (vpn.hasCounters) Fmt.bytes(vpn.rxBytes) else "n/a (OpenVPN)", Icons.Rounded.CloudDownload),
+            Triple("Uploaded (session)", if (vpn.hasCounters) Fmt.bytes(vpn.txBytes) else "n/a (OpenVPN)", Icons.Rounded.CloudUpload),
             Triple("Duration", vpn.connectedAt?.let { Fmt.duration(now - it) } ?: "—", Icons.Rounded.Timer),
             Triple("Status", vpn.status.label, Icons.Rounded.Shield),
         )
@@ -89,7 +89,7 @@ fun StatsContent(vpn: VpnState, usage: UsageSummary, sessions: List<SessionEntit
         Spacer(Modifier.height(14.dp))
         SecondaryButton("Reset local statistics", { confirm = true }, Modifier.fillMaxWidth(), Icons.Rounded.DeleteSweep)
         Text(
-            "Only byte counters and connection times are stored, on this device only. No browsing history or DNS queries are ever recorded.",
+            "Only byte counters and connection times are stored, on this device only. No browsing history or DNS queries are ever recorded. VPN Gate (OpenVPN) sessions record duration only – the helper app does not expose data counters.",
             color = Abg.colors.textDim, fontSize = 12.sp, modifier = Modifier.padding(8.dp),
         )
     }

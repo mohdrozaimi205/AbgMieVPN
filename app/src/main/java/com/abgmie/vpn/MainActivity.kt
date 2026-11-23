@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.abgmie.vpn.core.AbgMieTheme
@@ -57,5 +58,7 @@ private fun AppRoot(vm: MainViewModel, isTv: Boolean) {
     }
     LaunchedEffect(Unit) { vm.permissionRequests.collect { permission.launch(it) } }
     LaunchedEffect(Unit) { vm.messages.collect { snackbar.showSnackbar(it) } }
+    val ctx = LocalContext.current
+    LaunchedEffect(Unit) { vm.externalLaunches.collect { runCatching { ctx.startActivity(it) } } }
     if (isTv) TvApp(vm, snackbar) else MobileApp(vm, snackbar)
 }

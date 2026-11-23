@@ -127,6 +127,8 @@ fun KillSwitchContent(enabled: Boolean, onToggle: (Boolean) -> Unit) {
 
             With this enabled, Android blocks all traffic whenever the AbgMieVPN tunnel is down, so nothing silently falls back to your normal connection. Inside the app, the kill switch also keeps retrying the tunnel instead of giving up.
 
+            VPN Gate (OpenVPN): the tunnel belongs to "OpenVPN for Android", so set Always-on + Block connections on THAT app instead.
+
             Limitations: some TV boxes and custom ROMs (Android TV, some Xiaomi/Honor builds) hide this screen or the "Block connections" option. In that case only the in-app reconnect protection is available.
             """.trimIndent()
         )
@@ -150,11 +152,12 @@ fun InfoBlock(title: String, body: String) {
 
 object InfoText {
     val privacy = """
-        AbgMieVPN is a personal VPN client. It connects only to WireGuard servers that you configure yourself.
+        AbgMieVPN is a personal VPN client. It connects to WireGuard servers you configure yourself, or – if you choose – to VPN Gate public relays.
 
         • No browsing activity is logged.
         • No DNS queries are logged.
         • No user data is sold. No advertising SDKs. No analytics trackers.
+        • VPN Gate relays are run by volunteers (University of Tsukuba academic experiment). The relay operator and VPN Gate can see and log your connection (most list a 2-week log policy). Do not use them for banking or private accounts.
         • A VPN improves privacy on untrusted networks, but it does NOT make you completely anonymous: your VPN server provider, websites you sign in to and browser fingerprinting can still identify you.
     """.trimIndent()
 
@@ -173,6 +176,9 @@ object InfoText {
         • Your own VPN servers (WireGuard, UDP).
         • api.ipify.org – only to display your current public IP.
         • api.github.com / github.com – only when you check for updates.
+        • www.vpngate.net – to download the public relay list (only if you use VPN Gate).
+
+        VPN Gate connections run through the free app "OpenVPN for Android" (de.blinkt.openvpn) via its official remote-control API. AbgMieVPN passes it the relay's OpenVPN config and reads the connection status.
     """.trimIndent()
 
     val security = """

@@ -11,6 +11,15 @@
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <uses-feature android:name="android.software.leanback" android:required="false" />
 
+    <!-- Helper engine for OpenVPN / VPN Gate servers: "OpenVPN for Android" (de.blinkt.openvpn) via its public AIDL API -->
+    <queries>
+        <package android:name="de.blinkt.openvpn" />
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="market" />
+        </intent>
+    </queries>
+
     <application
         android:name=".AbgMieApp"
         android:allowBackup="true"

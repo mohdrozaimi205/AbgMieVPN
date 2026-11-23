@@ -101,6 +101,9 @@ class VpnManager @Inject constructor(
         scope.launch { doDisconnect() }
     }
 
+    /** Used before handing the VPN slot to another engine (Android allows one VPN at a time). */
+    suspend fun disconnectAndWait() = doDisconnect()
+
     fun toggle(server: ServerEntity?) {
         val st = _state.value.status
         when {

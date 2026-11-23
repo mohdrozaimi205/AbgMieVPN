@@ -23,6 +23,7 @@ import com.abgmie.vpn.core.Brand
 import com.abgmie.vpn.core.Fmt
 import com.abgmie.vpn.data.countries.CountryData
 import com.abgmie.vpn.data.db.ServerEntity
+import com.abgmie.vpn.domain.Target
 import com.abgmie.vpn.domain.VpnState
 import com.abgmie.vpn.domain.VpnStatus
 import com.abgmie.vpn.ui.*
@@ -56,12 +57,12 @@ fun HomeScreen(vm: MainViewModel, wide: Boolean, onOpenLocations: () -> Unit, on
                     ServerCard(selected, v, onOpenLocations)
                 }
                 Column(Modifier.weight(1f)) {
-                    if (servers.isEmpty()) NoServerCard(onAddServer)
+                    if (servers.isEmpty() && selected == null) NoServerCard(onAddServer, onOpenLocations)
                     LiveMetrics(v, cols = 2)
                 }
             }
         } else {
-            if (servers.isEmpty()) NoServerCard(onAddServer)
+            if (servers.isEmpty() && selected == null) NoServerCard(onAddServer, onOpenLocations)
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) { PowerBlock(v, vm, 230.dp) }
             Spacer(Modifier.height(14.dp))
             ServerCard(selected, v, onOpenLocations)
@@ -100,7 +101,7 @@ private fun PowerBlock(v: VpnState, vm: MainViewModel, size: androidx.compose.ui
 }
 
 @Composable
-fun ServerCard(s: ServerEntity?, v: VpnState, onClick: () -> Unit) {
+fun ServerCard(s: Target?, v: VpnState, onClick: () -> Unit) {
     val country = CountryData.find(s?.countryCode)
     GlassCard(Modifier.fillMaxWidth(), onClick = onClick, highlight = v.status == VpnStatus.CONNECTED) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -108,10 +109,10 @@ fun ServerCard(s: ServerEntity?, v: VpnState, onClick: () -> Unit) {
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text(country?.name ?: "No server selected", color = Abg.colors.text, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
-                Text(s?.let { "${it.city} · ${it.name}" } ?: "Tap to choose a location", color = Abg.colors.textDim, fontSize = 13.sp)
+                Text(s?.let { "${it.title} · ${it.subtitle}" } ?: "Tap to choose a location", color = Abg.colors.textDim, fontSize = 13.sp, maxLines = 2)
             }
             Column(horizontalAlignment = Alignment.End) {
-                Text(s?.lastPingMs?.let { "$it ms" } ?: "— ms", color = Brand.Cyan, fontWeight = FontWeight.SemiBold)
+                Text(s?.pingMs?.let { "$it ms" } ?: "— ms", color = Brand.Cyan, fontWeight = FontWeight.SemiBold)
                 Icon(Icons.Rounded.ChevronRight, null, tint = Abg.colors.textDim)
             }
         }
@@ -120,31 +121,38 @@ fun ServerCard(s: ServerEntity?, v: VpnState, onClick: () -> Unit) {
 
 @Composable
 fun LiveMetrics(v: VpnState, cols: Int) {
+    val na = "n/a (OpenVPN)"
     val tiles = listOf(
-        Triple("Download", Fmt.rate(v.rxRate), Icons.Rounded.SouthEast),
-        Triple("Upload", Fmt.rate(v.txRate), Icons.Rounded.NorthEast),
-        Triple("Total downloaded", Fmt.bytes(v.rxBytes), Icons.Rounded.CloudDownload),
-        Triple("Total uploaded", Fmt.bytes(v.txBytes), Icons.Rounded.CloudUpload),
+        Triple("Download", if (v.hasCounters) Fmt.rate(v.rxRate) else na, Icons.Rounded.SouthEast),
+        Triple("Upload", if (v.hasCounters) Fmt.rate(v.txRate) else na, Icons.Rounded.NorthEast),
+        Triple("Total downloaded", if (v.hasCounters) Fmt.bytes(v.rxBytes) else na, Icons.Rounded.CloudDownload),
+        Triple("Total uploaded", if (v.hasCounters) Fmt.bytes(v.txBytes) else na, Icons.Rounded.CloudUpload),
         Triple("Public IP", v.publicIp ?: "—", Icons.Rounded.Language),
-        Triple("VPN server", v.server?.endpoint ?: "—", Icons.Rounded.Dns),
+        Triple("VPN server", v.endpointText ?: "—", Icons.Rounded.Dns),
     )
     TileGrid(tiles, cols)
 }
 
 @Composable
-fun NoServerCard(onAdd: () -> Unit) {
+fun NoServerCard(onAdd: () -> Unit, onBrowse: (() -> Unit)? = null) {
     GlassCard(Modifier.fillMaxWidth().padding(bottom = 14.dp), highlight = true) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Rounded.CloudOff, null, tint = Brand.Warning)
             Spacer(Modifier.width(10.dp))
-            Text("VPN connection not yet available", color = Abg.colors.text, fontWeight = FontWeight.SemiBold)
+            Text("No server selected yet", color = Abg.colors.text, fontWeight = FontWeight.SemiBold)
         }
         Spacer(Modifier.height(6.dp))
         Text(
-            "No VPN server is configured. Set up your own WireGuard server (see docs/SERVER_SETUP.md) and import its config here.",
+            "Pick a free VPN Gate public server in Locations, or add your own WireGuard server (most private).",
             color = Abg.colors.textDim, fontSize = 13.sp, textAlign = TextAlign.Start,
         )
         Spacer(Modifier.height(12.dp))
-        PrimaryButton("Add server", onAdd, Modifier.fillMaxWidth(), icon = Icons.Rounded.Add)
+        if (onBrowse != null) {
+            PrimaryButton("Browse VPN Gate servers", onBrowse, Modifier.fillMaxWidth(), icon = Icons.Rounded.Public)
+            Spacer(Modifier.height(8.dp))
+            SecondaryButton("Add my own server", onAdd, Modifier.fillMaxWidth(), Icons.Rounded.Add)
+        } else {
+            PrimaryButton("Add server", onAdd, Modifier.fillMaxWidth(), icon = Icons.Rounded.Add)
+        }
     }
 }

@@ -25,6 +25,9 @@ import com.abgmie.vpn.data.countries.Continent
 import com.abgmie.vpn.data.countries.CountryData
 import com.abgmie.vpn.data.db.ServerEntity
 import com.abgmie.vpn.domain.SortMode
+import com.abgmie.vpn.domain.GateServer
+import com.abgmie.vpn.core.Fmt
+import java.util.Locale
 import com.abgmie.vpn.ui.*
 
 @Composable
@@ -74,10 +77,8 @@ fun LocationsScreen(vm: MainViewModel, wide: Boolean, onAdd: () -> Unit, onConne
                     }
                 }
             }
-            if (servers.isEmpty()) {
-                Spacer(Modifier.height(10.dp))
-                NoServerCard(onAdd)
-            }
+            Spacer(Modifier.height(10.dp))
+            VpnGateCard(vm)
             if (favs.isNotEmpty()) {
                 SectionTitle("Favourites")
                 favs.forEach { ServerRow(it, vm, v.server?.id == it.id && v.status.isActive) { vm.connectTo(it); onConnected() } }
@@ -112,11 +113,16 @@ fun LocationsScreen(vm: MainViewModel, wide: Boolean, onAdd: () -> Unit, onConne
                         if (row.servers.isEmpty()) {
                             Text(
                                 if (row.country.continent == Continent.ANTARCTICA) "Informational only – no commercial server availability is assumed."
-                                else "Coming Soon – no verified server in this country yet. Add your own server to enable it.",
+                                else if (row.gates.isEmpty()) "Coming Soon – no verified server in this country yet. Add your own server to enable it."
+                                else "No own server here – VPN Gate relays below.",
                                 color = Abg.colors.textDim, fontSize = 13.sp,
                             )
                         }
                         row.servers.forEach { s -> ServerRow(s, vm, v.server?.id == s.id && v.status.isActive) { vm.connectTo(s); onConnected() } }
+                        if (row.gates.isNotEmpty()) {
+                            Text("VPN Gate public relays", color = Abg.colors.textDim, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp, bottom = 2.dp))
+                            row.gates.take(12).forEach { g -> GateRow(g, v.gate?.id == g.id && v.status.isActive) { vm.connectGate(g); onConnected() } }
+                        }
                     }
                 }
             }
@@ -132,7 +138,11 @@ private fun AvailabilityBadge(row: CountryRow) {
         Modifier.clip(CircleShape).background((if (ok) Brand.Success else Abg.colors.textDim).copy(alpha = 0.14f)).padding(horizontal = 10.dp, vertical = 4.dp)
     ) {
         Text(
-            if (ok) "Connectable · ${row.servers.size}" + (row.bestPing?.let { " · $it ms" } ?: "") else "Coming Soon",
+            when {
+                row.servers.isNotEmpty() -> "Connectable · ${row.servers.size}" + (row.bestPing?.let { " · $it ms" } ?: "")
+                ok -> "VPN Gate · ${row.gates.size}" + (row.bestPing?.let { " · $it ms" } ?: "")
+                else -> "Coming Soon"
+            },
             color = if (ok) Brand.Success else Abg.colors.textDim, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
         )
     }
@@ -169,4 +179,62 @@ fun ServerRow(s: ServerEntity, vm: MainViewModel, active: Boolean, onConnect: ()
             text = { Text("The encrypted config for this server will be removed from this device.") },
         )
     }
+}
+
+@Composable
+fun VpnGateCard(vm: MainViewModel) {
+    val gl by vm.gateList.collectAsStateWithLifecycle()
+    val installed = remember(gl.fetchedAt, gl.loading) { vm.helperInstalled() }
+    GlassCard(Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.Public, null, tint = Brand.Cyan)
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text("VPN Gate public servers", color = Abg.colors.text, fontWeight = FontWeight.SemiBold)
+                Text(
+                    when {
+                        gl.loading -> "Loading live list…"
+                        gl.servers.isNotEmpty() -> "${gl.servers.size} relays · updated ${gl.fetchedAt?.let { Fmt.date(it) } ?: "—"}"
+                        gl.error != null -> gl.error ?: ""
+                        else -> "Not loaded yet"
+                    },
+                    color = Abg.colors.textDim, fontSize = 12.sp,
+                )
+            }
+            IconButton(onClick = { vm.refreshGate() }, enabled = !gl.loading) { Icon(Icons.Rounded.Refresh, "Refresh VPN Gate", tint = Brand.ElectricBlue) }
+        }
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "Free volunteer relays (University of Tsukuba experiment). Operators can see and log your connection – fine for changing country, NOT for banking or private accounts.",
+            color = Brand.Warning, fontSize = 12.sp,
+        )
+        if (!installed) {
+            Spacer(Modifier.height(10.dp))
+            Text("Needs the free helper app \"OpenVPN for Android\" (one-time install).", color = Abg.colors.text, fontSize = 13.sp)
+            Spacer(Modifier.height(8.dp))
+            PrimaryButton("Install OpenVPN for Android", { vm.installHelper() }, Modifier.fillMaxWidth(), icon = Icons.Rounded.Download)
+        }
+    }
+}
+
+@Composable
+fun GateRow(g: GateServer, active: Boolean, onConnect: () -> Unit) {
+    val flag = CountryData.find(g.countryCode)?.flag ?: "🌐"
+    GlassCard(Modifier.fillMaxWidth().padding(vertical = 3.dp), onClick = onConnect, radius = 16.dp, highlight = active, padding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(flag, fontSize = 22.sp)
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text(g.hostName, color = Abg.colors.text, fontWeight = FontWeight.Medium, maxLines = 1)
+                Text(gateLine(g), color = Abg.colors.textDim, fontSize = 12.sp, maxLines = 1)
+            }
+            Icon(Icons.Rounded.ChevronRight, null, tint = Abg.colors.textDim)
+        }
+    }
+}
+
+fun gateLine(g: GateServer): String {
+    val ping = g.myPingMs?.let { "$it ms" } ?: g.reportedPingMs?.let { "$it ms (JP)" } ?: "ping n/a"
+    val speed = String.format(Locale.US, "%.0f Mbps", g.speedMbps)
+    return "$ping · $speed · ${g.sessions} users · logs ${g.logPolicy.ifBlank { "?" }}"
 }

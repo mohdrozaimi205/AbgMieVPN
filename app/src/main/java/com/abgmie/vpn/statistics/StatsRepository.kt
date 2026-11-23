@@ -24,6 +24,9 @@ class StatsRepository @Inject constructor(private val dao: SessionDao) {
     suspend fun start(s: ServerEntity): Long = dao.insert(
         SessionEntity(serverId = s.id, serverName = s.name, countryCode = s.countryCode, city = s.city, startedAt = System.currentTimeMillis())
     )
+    suspend fun startRaw(name: String, countryCode: String, city: String): Long = dao.insert(
+        SessionEntity(serverId = -1, serverName = name, countryCode = countryCode, city = city, startedAt = System.currentTimeMillis())
+    )
     suspend fun update(id: Long, rx: Long, tx: Long) = dao.updateTotals(id, rx, tx, null)
     suspend fun finish(id: Long, rx: Long, tx: Long) = dao.updateTotals(id, rx, tx, System.currentTimeMillis())
     suspend fun closeDangling() = dao.closeDangling(System.currentTimeMillis())
