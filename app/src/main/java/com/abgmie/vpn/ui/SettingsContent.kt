@@ -9,6 +9,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
+import androidx.compose.material.icons.automirrored.rounded.Notes
+import androidx.compose.material.icons.automirrored.rounded.Login
+import androidx.compose.material.icons.automirrored.rounded.Logout
+import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -68,7 +72,7 @@ fun SettingsContent(
         SectionTitle("Application")
         SettingRow("Check for Updates", "From official GitHub Releases", Icons.Rounded.SystemUpdate, onClick = { open(SubPage.UPDATES) })
         SettingRow("Current Version", BuildConfig.VERSION_NAME, Icons.Rounded.Info, onClick = { open(SubPage.UPDATES) })
-        SettingRow("Release Notes", "What's new in the latest release", Icons.Rounded.Notes, onClick = { open(SubPage.UPDATES) })
+        SettingRow("Release Notes", "What's new in the latest release", Icons.AutoMirrored.Rounded.Notes, onClick = { open(SubPage.UPDATES) })
         SettingRow("About AbgMieVPN", "One World. One Connection.", Icons.Rounded.Public, onClick = { open(SubPage.ABOUT) })
 
         SectionTitle("Privacy")
@@ -98,9 +102,9 @@ fun AccountCard(user: UserProfile?, configured: Boolean, onSignIn: () -> Unit, o
         }
         Spacer(Modifier.height(12.dp))
         if (user == null) {
-            PrimaryButton("Sign in with Google", onSignIn, Modifier.fillMaxWidth(), enabled = configured, icon = Icons.Rounded.Login)
+            PrimaryButton("Sign in with Google", onSignIn, Modifier.fillMaxWidth(), enabled = configured, icon = Icons.AutoMirrored.Rounded.Login)
         } else {
-            SecondaryButton("Sign out", onSignOut, Modifier.fillMaxWidth(), Icons.Rounded.Logout)
+            SecondaryButton("Sign out", onSignOut, Modifier.fillMaxWidth(), Icons.AutoMirrored.Rounded.Logout)
         }
     }
 }
@@ -130,7 +134,7 @@ fun KillSwitchContent(enabled: Boolean, onToggle: (Boolean) -> Unit) {
         PrimaryButton("Open Android VPN settings", {
             try { ctx.startActivity(Intent(Settings.ACTION_VPN_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
             catch (e: ActivityNotFoundException) { err = "This device does not provide the Android VPN settings screen." }
-        }, Modifier.fillMaxWidth(), icon = Icons.Rounded.OpenInNew)
+        }, Modifier.fillMaxWidth(), icon = Icons.AutoMirrored.Rounded.OpenInNew)
         err?.let { Text(it, color = Brand.Danger, modifier = Modifier.padding(8.dp)) }
     }
 }
