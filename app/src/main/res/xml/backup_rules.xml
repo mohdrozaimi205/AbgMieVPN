@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- Never back up encrypted WireGuard configs: the Keystore key cannot be restored on another device -->
+    <exclude domain="database" path="abgmie.db" />
+    <exclude domain="database" path="abgmie.db-wal" />
+    <exclude domain="database" path="abgmie.db-shm" />
+</full-backup-content>

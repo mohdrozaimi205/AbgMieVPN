@@ -1,0 +1,17 @@
+*.iml
+.gradle/
+/local.properties
+.idea/
+.DS_Store
+/build
+/app/build
+/captures
+.externalNativeBuild
+.cxx
+*.jks
+*.keystore
+keystore.properties
+# Firebase config is per-owner; add it locally / via CI secret
+app/google-services.json
+*.conf
+!docs/*.conf.example
