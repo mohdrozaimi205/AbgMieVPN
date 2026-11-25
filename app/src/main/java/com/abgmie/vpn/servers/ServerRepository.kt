@@ -42,6 +42,8 @@ class ServerRepository @Inject constructor(
     /** Validates a wg-quick style config and returns a parsed Config or a readable error. */
     fun validate(text: String): Config {
         if (text.length > 64_000) throw ImportException("Config file is too large.")
+        if (Regex("(?im)^\\s*PrivateKey\\s*=\\s*\\*+").containsMatchIn(text))
+            throw ImportException("The private key is hidden (*****). Use \"Choose .conf file\" with the file you DOWNLOADED from your VPN provider – copied text hides the key.")
         val cfg = try {
             Config.parse(ByteArrayInputStream(text.toByteArray()))
         } catch (e: Exception) {
